@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0d1427"><title>SKYBOUND: Ascension</title>
+<style>
+:root{--cyan:#6cf0e4;--gold:#ffd36e;--pink:#ff729d;--ink:#edf4ff}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;min-height:100%;height:100%;overflow:hidden;background:#0d1427;color:var(--ink);font-family:system-ui,Segoe UI,sans-serif}
+body{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 0%,#263a60,#0d1427 70%);overscroll-behavior:none}
+#game{position:relative;width:min(100vw,520px);height:min(100dvh,900px);height:min(100svh,900px);overflow:hidden;background:#101a30;box-shadow:0 0 60px #0009;isolation:isolate;flex:0 0 auto}
+canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;gap:6px;padding:10px;pointer-events:none}
+.stat{background:#101a30d9;border:1px solid #ffffff24;border-radius:12px;padding:7px 10px;min-width:68px;font-size:10px;letter-spacing:.1em;color:#aebfdf;backdrop-filter:blur(8px)}
+.stat b{display:block;color:white;font-size:16px;letter-spacing:0}.stat .cyan{color:var(--cyan)}.stat .gold{color:var(--gold)}
+#toast{position:absolute;top:75px;left:50%;transform:translateX(-50%);background:#101a30ed;border:1px solid #ffffff35;border-radius:18px;padding:8px 14px;font-size:11px;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none;z-index:3}
+#controls{position:absolute;bottom:max(14px,env(safe-area-inset-bottom));left:0;right:0;display:flex;justify-content:space-between;padding:0 14px;pointer-events:none;z-index:5}
+#controls .ctrl{pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.overlay{overscroll-behavior:contain}
+@media (min-width:700px) and (min-height:700px){#game{border:1px solid #ffffff18;border-radius:18px}}
+@media (max-width:360px){.hud{gap:4px;padding:7px}.stat{min-width:0;padding:6px 7px;font-size:9px}.stat b{font-size:14px}.ctrl{width:54px;height:53px}.ctrl.jump{width:70px}}
+@media (orientation:landscape) and (max-height:560px){#game{width:min(100vw,520px);height:100svh}.panel{padding:12px 15px}.sub{margin:7px 0 9px}.eyebrow{font-size:9px}h1{font-size:34px}.small{margin-top:7px}.ctrl{height:46px;width:52px}.ctrl.jump{width:68px}#controls{bottom:5px}.hud{padding:5px}.stat{padding:4px 7px}}
+.pad{display:flex;gap:9px}.ctrl{pointer-events:auto;width:59px;height:57px;border-radius:17px;background:#172541d9;border:1px solid #ffffff38;color:white;font-size:23px;display:grid;place-items:center;user-select:none;touch-action:none;box-shadow:0 5px 15px #0005}
+.ctrl.jump{width:78px;background:#ffe08b;color:#182438;border:0;font-size:11px;font-weight:900;letter-spacing:.1em}
+.overlay{position:absolute;inset:0;display:grid;place-items:center;padding:17px;background:linear-gradient(#0b1225b9,#0b1225ed);z-index:4;overflow:auto}
+.panel{width:min(100%,370px);padding:23px 20px;border:1px solid #ffffff25;border-radius:23px;background:linear-gradient(145deg,#243252f5,#141d35f7);box-shadow:0 25px 70px #0009;text-align:center}
+.eyebrow{color:var(--cyan);font-size:10px;font-weight:900;letter-spacing:.23em}
+h1{font-size:clamp(37px,10vw,52px);line-height:.92;margin:10px 0 6px;letter-spacing:-.06em}
+.sub{color:#b7c5df;font-size:13px;line-height:1.5;margin:12px 0 17px}
+button{border:0;border-radius:13px;padding:12px 15px;font:850 12px system-ui;letter-spacing:.08em;color:#10202c;background:linear-gradient(135deg,#83f4e8,#4ccbd6);cursor:pointer}
+button:active{transform:translateY(1px)}button.secondary{background:#293958;color:#e7efff;border:1px solid #ffffff24}button.gold{background:linear-gradient(135deg,#ffe49b,#ffbd55)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions button:first-child{grid-column:1/-1}
+.small{font-size:10px;color:#8798ba;line-height:1.5;margin-top:12px}
+.rowline{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #ffffff13;text-align:left;font-size:12px}
+.rowline:last-child{border:0}.rowline small{display:block;color:#9baac8}.rowline button{min-width:84px;padding:9px}
+.skinrow{display:flex;gap:8px;justify-content:center;margin:12px 0}.skin{width:42px;height:42px;border-radius:13px;border:2px solid #ffffff30;cursor:pointer}
+#bossbar{position:absolute;top:83px;left:15%;width:70%;height:8px;border-radius:8px;background:#ffffff25;display:none;overflow:hidden}
+#bossfill{height:100%;width:100%;background:linear-gradient(90deg,#ff6b9a,#ffd36e)}
+@media(min-width:600px){#game{height:min(94dvh,900px);height:min(94svh,900px);border-radius:22px}}
+</style></head><body><div id="game">
+<canvas id="c" width="480" height="900" tabindex="0" aria-label="Skybound Ascension game. Use A and D or arrow keys to move, Space or Up to jump."></canvas>
+<div class="hud">
+ <div class="stat">FLOOR<b id="floor">01</b></div>
+ <div class="stat">HEIGHT<b class="cyan" id="height">0 m</b></div>
+ <div class="stat">COINS<b class="gold" id="coins">0</b></div>
+ <div class="stat">BEST<b id="best">0 m</b></div>
+ <button id="fullscreen" class="secondary" style="pointer-events:auto;padding:7px 9px;font-size:10px;align-self:flex-start" aria-label="Toggle fullscreen">⛶</button>
+</div><div id="toast"></div><div id="bossbar"><div id="bossfill"></div></div>
+<div id="controls"><div class="pad"><div class="ctrl" id="left" role="button" aria-label="Move left">◀</div><div class="ctrl" id="right" role="button" aria-label="Move right">▶</div></div><div class="ctrl jump" id="jump" role="button" aria-label="Jump">JUMP</div></div>
+<div class="overlay" id="menu"><div class="panel">
+ <div class="eyebrow">A VERTICAL INDIE ADVENTURE</div><h1>SKYBOUND<br><span style="color:#6cf0e4">ASCENSION</span></h1>
+ <div style="color:#ffd36e;font-size:10px;font-weight:900;letter-spacing:.2em">CLIMB BEYOND THE CLOUDS</div>
+ <p class="sub">Explore a mysterious tower, collect lost coins, defeat guardian drones and build your own climber.</p>
+ <div class="actions"><button id="start">START CLIMBING</button><button class="secondary" id="shopOpen">UPGRADE SHOP</button><button class="secondary" id="skinOpen">CHARACTERS</button><button class="secondary" id="scoresOpen">LEADERBOARD</button></div>
+ <div class="small">MOVE: A / D or ◀ ▶ &nbsp; JUMP: SPACE / ↑<br>On phones, use the touch buttons. Progress saves on this device.</div>
+ </div></div>
+<div class="overlay" id="shop" style="display:none"><div class="panel"><div class="eyebrow">SPEND YOUR LOOT</div><h2>UPGRADE SHOP</h2><p class="sub">Coins: <b id="shopCoins" style="color:#ffd36e">0</b></p><div id="shopItems"></div><button class="secondary" id="shopBack" style="width:100%;margin-top:13px">BACK</button></div></div>
+<div class="overlay" id="skins" style="display:none"><div class="panel"><div class="eyebrow">MAKE THE CLIMB YOURS</div><h2>CHARACTERS</h2><div class="skinrow" id="skinChoices"></div><p class="sub" id="skinDesc">Choose your climber.</p><button id="skinBuy" style="width:100%">SELECT</button><button class="secondary" id="skinBack" style="width:100%;margin-top:8px">BACK</button></div></div>
+<div class="overlay" id="scores" style="display:none"><div class="panel"><div class="eyebrow">YOUR PERSONAL HALL OF FAME</div><h2>LEADERBOARD</h2><div id="scoreList"></div><p class="small">Local leaderboard for this browser/device. Online rankings require a server.</p><button class="secondary" id="scoresBack" style="width:100%;margin-top:12px">BACK</button></div></div>
+<div class="overlay" id="gameover" style="display:none"><div class="panel"><div class="eyebrow">THE TOWER CLAIMS ANOTHER</div><h1 style="font-size:43px">FALLEN</h1><p class="sub" id="result"></p><div class="actions"><button id="retry">CLIMB AGAIN</button><button class="secondary" id="home">MAIN MENU</button></div></div></div>
+<div class="overlay" id="victory" style="display:none"><div class="panel"><div class="eyebrow">YOU CONQUERED THE IMPOSSIBLE</div><h1 style="color:#ffd36e">SUMMIT!</h1><p class="sub">The tower's guardian has fallen. You reached the top!</p><button id="victoryAgain" style="width:100%">PLAY AGAIN</button></div></div>
+</div>
+<script>
+(()=>{
+const c=document.querySelector('#c'),x=c.getContext('2d'),W=480,H=900,$=id=>document.getElementById(id);
+const save=(k,v)=>localStorage.setItem('sb_'+k,JSON.stringify(v));
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem('sb_'+k))??d}catch{return d}};
+let data=load('data',{coins:0,best:0,up:{jump:0,magnet:0,shield:0},skins:[0],skin:0,scores:[]});
+const upgrades=[{id:'jump',name:'SPRING BOOTS',desc:'Jump higher with every level',cost:35,max:5},{id:'magnet',name:'COIN MAGNET',desc:'Collect coins from farther away',cost:45,max:4},{id:'shield',name:'ENERGY SHIELD',desc:'One extra hit protection per run',cost:60,max:3}];
+const skins=[{name:'Explorer',color:'#63e6e2',price:0},{name:'Solar Knight',color:'#ffd166',price:90},{name:'Neon Rogue',color:'#ff6b9a',price:140},{name:'Frost Walker',color:'#a5c8ff',price:190},{name:'Void Runner',color:'#c49aff',price:260}];
+let active=false,keys={},touch={},p,plats,coins,drones,particles,camera,peak,runCoins,frame,boss,checkpointY,shieldHits,invuln,usedCheckpoint=false;
+const rnd=(a,b)=>Math.random()*(b-a)+a, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function persist(){save('data',data);$('best').textContent=data.best+' m'}
+function show(id){['menu','shop','skins','scores','gameover','victory'].forEach(v=>$(v).style.display=v===id?'grid':'none')}
+function toast(t){$('toast').textContent=t;$('toast').style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').style.opacity=0,1300)}
+function burst(px,py,color,n=8){for(let i=0;i<n;i++)particles.push({x:px,y:py,vx:rnd(-3,3),vy:rnd(-4,1),life:rnd(18,36),color})}
+function platform(y,i){let w=rnd(85,145),xx=rnd(28,W-w-28);plats.push({x:xx,y,w,h:14,type:i%8===5?'moving':'normal',base:xx,phase:rnd(0,6.28),amp:rnd(18,45)});if(i>2&&i%5===1)drones.push({x:rnd(70,410),y:y-rnd(42,72),base:rnd(70,410),phase:rnd(0,6.28),r:13});if(i%3===0)coins.push({x:xx+w/2,y:y-32,r:9,taken:false})}
+function reset(){
+ p={x:220,y:740,w:28,h:40,vx:0,vy:0,on:false,face:1};plats=[];coins=[];drones=[];particles=[];camera=0;peak=0;runCoins=0;frame=0;boss=null;checkpointY=0;shieldHits=data.up.shield;invuln=0;usedCheckpoint=false;
+ plats.push({x:135,y:800,w:210,h:20,type:'start'});let y=710;for(let i=0;i<15;i++){y-=rnd(88,116);platform(y,i)}
+ $('bossbar').style.display='none';
+}
+function begin(){reset();show('');active=true;requestAnimationFrame(loop)}
+function finish(win=false){
+ active=false;let m=Math.floor(peak/10);data.best=Math.max(data.best,m);data.scores.push({height:m,coins:runCoins,date:new Date().toLocaleDateString()});data.scores.sort((a,b)=>b.height-a.height);data.scores=data.scores.slice(0,10);persist();show(win?'victory':'gameover');
+ $('result').textContent=`You climbed ${m} metres, reached floor ${Math.floor(peak/95)+1}, and collected ${runCoins} coins.`;
+}
+$('start').addEventListener('click',begin);$('retry').addEventListener('click',begin);$('victoryAgain').addEventListener('click',begin);$('home').addEventListener('click',()=>show('menu'));
+$('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement){await $('game').requestFullscreen?.()}else{await document.exitFullscreen?.()}}catch(e){toast('Fullscreen is not available in this browser')}});
+function renderShop(){$('shopCoins').textContent=data.coins;$('shopItems').innerHTML=upgrades.map(u=>{let lv=data.up[u.id],price=u.cost*(lv+1);return `<div class="rowline"><div><b>${u.name}</b><small>${u.desc} · Level ${lv}/${u.max}</small></div><button ${lv>=u.max||data.coins<price?'disabled':''} data-buy="${u.id}" class="${lv>=u.max?'secondary':''}">${lv>=u.max?'MAX':price+' COINS'}</button></div>`}).join('');$('shopItems').querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{let u=upgrades.find(v=>v.id===b.dataset.buy),lv=data.up[u.id],price=u.cost*(lv+1);if(lv<u.max&&data.coins>=price){data.coins-=price;data.up[u.id]++;persist();renderShop();toast(u.name+' UPGRADED')}})}
+$('shopOpen').onclick=()=>{renderShop();show('shop')};$('shopBack').onclick=()=>show('menu');
+let skinPick=data.skin;
+function renderSkins(){ $('skinChoices').innerHTML=skins.map((s,i)=>`<button class="skin" data-skin="${i}" style="background:${s.color};outline:${i===skinPick?'3px solid white':'none'};outline-offset:3px"></button>`).join('');$('skinChoices').querySelectorAll('[data-skin]').forEach(b=>b.onclick=()=>{skinPick=+b.dataset.skin;renderSkins()});let s=skins[skinPick],owned=data.skins.includes(skinPick);$('skinDesc').textContent=s.name+' · '+(owned?'Unlocked':s.price+' coins');$('skinBuy').textContent=owned?(data.skin===skinPick?'CURRENTLY SELECTED':'SELECT CHARACTER'):'UNLOCK FOR '+s.price+' COINS';$('skinBuy').disabled=!owned&&data.coins<s.price}
+$('skinBuy').onclick=()=>{let s=skins[skinPick];if(!data.skins.includes(skinPick)&&data.coins>=s.price){data.coins-=s.price;data.skins.push(skinPick)}if(data.skins.includes(skinPick))data.skin=skinPick;persist();renderSkins()};
+$('skinOpen').onclick=()=>{skinPick=data.skin;renderSkins();show('skins')};$('skinBack').onclick=()=>show('menu');
+function renderScores(){$('scoreList').innerHTML=data.scores.length?data.scores.map((s,i)=>`<div class="rowline"><b>#${i+1} · ${s.height} m</b><span>${s.coins} coins <small>${s.date}</small></span></div>`).join(''):'<p class="sub">No climbs recorded yet. Your first summit awaits.</p>'}
+$('scoresOpen').onclick=()=>{renderScores();show('scores')};$('scoresBack').onclick=()=>show('menu');
+const heldPointers={left:new Set(),right:new Set(),jump:new Set()};
+function bind(id,k){
+ const el=$(id);
+ const press=e=>{e.preventDefault();if(e.pointerId!==undefined)heldPointers[k].add(e.pointerId);touch[k]=true;};
+ const release=e=>{if(e.pointerId!==undefined)heldPointers[k].delete(e.pointerId);touch[k]=heldPointers[k].size>0;};
+ el.addEventListener('pointerdown',press,{passive:false});
+ el.addEventListener('contextmenu',e=>e.preventDefault());
+ window.addEventListener('pointerup',release);
+ window.addEventListener('pointercancel',release);
+ // Fallback for browsers/webviews that do not dispatch Pointer Events reliably.
+ el.addEventListener('touchstart',e=>{e.preventDefault();touch[k]=true;},{passive:false});
+ el.addEventListener('touchend',e=>{e.preventDefault();touch[k]=false;},{passive:false});
+ el.addEventListener('touchcancel',()=>touch[k]=false,{passive:true});
+}
+bind('left','left');bind('right','right');bind('jump','jump');
+window.addEventListener('keydown',e=>{keys[e.code]=true;if(['Space','ArrowUp','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault()});
+window.addEventListener('keyup',e=>keys[e.code]=false);
+window.addEventListener('blur',()=>{keys={};touch={left:false,right:false,jump:false};Object.values(heldPointers).forEach(s=>s.clear())});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){keys={};touch={left:false,right:false,jump:false};Object.values(heldPointers).forEach(s=>s.clear())}});
+$('c').addEventListener('pointerdown',()=> $('c').focus({preventScroll:true}));
+document.addEventListener('touchmove',e=>{if(e.target.closest('#controls')||e.target.closest('canvas'))e.preventDefault()},{passive:false});
+document.addEventListener('dblclick',e=>{if(e.target.closest('#game'))e.preventDefault()},{passive:false});
+const held=k=>!!(keys[k]||touch[k]);
+function update(){
+ frame++;let L=held('ArrowLeft')||held('KeyA'),R=held('ArrowRight')||held('KeyD'),J=held('Space')||held('ArrowUp')||held('KeyW')||touch.jump;
+ if(L){p.vx-=.7;p.face=-1}if(R){p.vx+=.7;p.face=1}p.vx=clamp(p.vx*.84,-5.6,5.6);
+ if(J&&p.on){p.vy=-(13.2+data.up.jump*1.15);p.on=false;burst(p.x+14,p.y+38,'#6cf0e4',5)}
+ p.vy=Math.min(14,p.vy+.57);let old=p.y;p.x+=p.vx;p.y+=p.vy;if(p.x<-p.w)p.x=W;if(p.x>W)p.x=-p.w;p.on=false;
+ for(let q of plats){if(q.type==='moving')q.x=q.base+Math.sin(frame*.025+q.phase)*q.amp;if(p.vy>=0&&old+p.h<=q.y+3&&p.y+p.h>=q.y&&p.x+p.w>q.x&&p.x<q.x+q.w){p.y=q.y-p.h;p.vy=0;p.on=true;if(q.y<checkpointY-650&&q.type!=='start'){checkpointY=q.y;usedCheckpoint=false;toast('CHECKPOINT REACHED')}}}
+ // Coin magnet and collection
+ let magnet=22+data.up.magnet*25;
+ for(let q of coins){if(q.taken)continue;let dx=q.x-(p.x+14),dy=q.y-(p.y+20),dist=Math.hypot(dx,dy);if(dist<magnet+12){q.x-=dx*.045;q.y-=dy*.045}if(dist<magnet+8){q.taken=true;runCoins++;data.coins++;$('coins').textContent=data.coins;burst(q.x,q.y,'#ffd36e',8);if(runCoins%5===0)toast('COIN STREAK!')}}
+ for(let d of drones){d.x=d.base+Math.sin(frame*.035+d.phase)*105;if(Math.hypot(p.x+14-d.x,p.y+20-d.y)<25&&invuln<=0){if(shieldHits>0){shieldHits--;invuln=100;burst(d.x,d.y,'#6cf0e4',15);toast('SHIELD BLOCKED HIT · '+shieldHits+' LEFT')}else{p.vy=-8;invuln=75;burst(d.x,d.y,'#ff729d',14);toast('SENTRY HIT!')}}}
+ if(invuln>0)invuln--;
+ // Guardian appears at milestone floors; defeat by stomping its core three times.
+ if(!boss&&peak>0&&Math.floor(peak/10)>=450&&Math.floor(peak/10)<470){boss={x:240,y:camera+220,hp:3,max:3,phase:0};toast('TOWER GUARDIAN!')}
+ if(boss){boss.y=camera+210+Math.sin(frame*.025)*25;boss.x=240+Math.sin(frame*.018)*115;let hit=Math.hypot(p.x+14-boss.x,p.y+20-boss.y)<36;if(hit&&p.vy>1&&p.y+p.h<boss.y+24){boss.hp--;p.vy=-12;invuln=55;burst(boss.x,boss.y,'#ffd36e',14);toast('GUARDIAN HIT!');if(boss.hp<=0){burst(boss.x,boss.y,'#ffd36e',35);boss=null;$('bossbar').style.display='none';data.coins+=100;runCoins+=100;toast('GUARDIAN DEFEATED · +100 COINS')}}if(boss){$('bossbar').style.display='block';$('bossfill').style.width=(boss.hp/boss.max*100)+'%'}}
+ let target=p.y-H*.48;if(target<camera)camera+=(target-camera)*.09;
+ peak=Math.max(peak,Math.max(0,800-(p.y+camera)));let top=Math.min(...plats.map(q=>q.y));while(top>camera-500){top-=rnd(88,116);platform(top,plats.length)}
+ plats=plats.filter(q=>q.y<camera+H+100);drones=drones.filter(q=>q.y<camera+H+100);coins=coins.filter(q=>!q.taken&&q.y<camera+H+100);
+ for(let q of particles){q.x+=q.vx;q.y+=q.vy;q.vy+=.12;q.life--}particles=particles.filter(q=>q.life>0);
+ if(p.y-camera>H+80){if(!usedCheckpoint&&checkpointY){p.y=checkpointY-65-camera;p.x=220;p.vy=0;usedCheckpoint=true;invuln=100;toast('CHECKPOINT RESPAWN')}else finish(false)}
+ let m=Math.floor(peak/10);$('height').textContent=m+' m';$('floor').textContent=String(Math.floor(peak/95)+1).padStart(2,'0');$('coins').textContent=data.coins;
+ if(m>=1200)finish(true);
+}
+function round(a,b,w,h,r){x.beginPath();x.roundRect(a,b,w,h,r);x.fill()}
+function draw(){
+ let g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#1b3557');g.addColorStop(.55,'#17243f');g.addColorStop(1,'#10172b');x.fillStyle=g;x.fillRect(0,0,W,H);
+ for(let i=0;i<75;i++){let sx=i*97%W,sy=((i*157-camera*.18)%(H+40)+H+40)%(H+40);x.fillStyle=`rgba(215,235,255,${.15+i%4*.1})`;x.fillRect(sx,sy,2,2)}
+ for(let i=0;i<5;i++){let yy=((i*230-camera*.28)%(H+180)+H+180)%(H+180)-60;x.fillStyle='#a9c8e51b';x.beginPath();x.ellipse((i*131+50)%W,yy,100,18,0,0,7);x.fill()}
+ x.fillStyle='#2a4163';x.fillRect(12,0,9,H);x.fillRect(W-21,0,9,H);
+ x.save();x.translate(0,-camera);
+ for(let q of plats){x.fillStyle=q.type==='start'?'#ffd36e':q.type==='moving'?'#6cf0e4':'#6984ad';x.shadowColor=q.type==='moving'?'#6cf0e4':'transparent';x.shadowBlur=q.type==='moving'?14:0;round(q.x,q.y,q.w,q.h,5);x.shadowBlur=0;x.fillStyle='#ffffff45';x.fillRect(q.x+5,q.y+2,q.w-10,2)}
+ for(let q of coins){x.save();x.translate(q.x,q.y);x.rotate(frame*.045);x.fillStyle='#ffd36e';x.shadowColor='#ffd36e';x.shadowBlur=13;x.beginPath();x.ellipse(0,0,6,10,0,0,7);x.fill();x.shadowBlur=0;x.fillStyle='#fff0bd';x.fillRect(-1,-5,2,10);x.restore()}
+ for(let d of drones){x.fillStyle='#ff729d';x.shadowColor='#ff729d';x.shadowBlur=15;x.beginPath();x.arc(d.x,d.y,d.r,0,7);x.fill();x.shadowBlur=0;x.fillStyle='#35172c';x.fillRect(d.x-6,d.y-3,12,6);x.fillStyle='white';x.fillRect(d.x-4,d.y-2,3,3);x.fillRect(d.x+2,d.y-2,3,3)}
+ if(boss){x.save();x.translate(boss.x,boss.y);x.rotate(Math.sin(frame*.04)*.08);x.fillStyle='#9c5baf';x.shadowColor='#ff729d';x.shadowBlur=24;x.beginPath();x.moveTo(0,-33);x.lineTo(34,-8);x.lineTo(26,28);x.lineTo(0,38);x.lineTo(-26,28);x.lineTo(-34,-8);x.closePath();x.fill();x.shadowBlur=0;x.fillStyle='#fff';x.fillRect(-13,-7,8,7);x.fillRect(5,-7,8,7);x.restore()}
+ x.save();x.translate(p.x+14,p.y+20);if(invuln>0&&frame%8<4)x.globalAlpha=.4;let col=skins[data.skin].color;x.fillStyle='#ffe5b5';round(-10,-19,20,20,7);x.fillStyle=col;round(-12,0,24,20,6);x.fillStyle='#17233e';x.fillRect(p.face===1?2:-7,-10,4,4);x.fillStyle='#ffd36e';x.fillRect(-11,15,8,5);x.fillRect(3,15,8,5);x.restore();
+ for(let q of particles){x.globalAlpha=Math.max(0,q.life/36);x.fillStyle=q.color;x.fillRect(q.x,q.y,4,4)}x.globalAlpha=1;x.restore();
+}
+function loop(){if(!active)return;update();draw();requestAnimationFrame(loop)}
+persist();$('best').textContent=data.best+' m';$('coins').textContent=data.coins;reset();draw();
+})();
+</script></body></html>
